@@ -62,10 +62,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.github.zly2006.zhihu.Account
-import com.github.zly2006.zhihu.BuildConfig
 import com.github.zly2006.zhihu.LocalNavigator
 import com.github.zly2006.zhihu.ui.PREFERENCE_NAME
-import com.github.zly2006.zhihu.ui.subscreens.DUO3_CARD_LARGE_TITLE_PREFERENCE_KEY
 import com.github.zly2006.zhihu.util.parseHtmlTextWithTheme
 import com.github.zly2006.zhihu.viewmodel.feed.BaseFeedViewModel
 import kotlinx.coroutines.launch
@@ -112,9 +110,6 @@ fun FeedCard(
     val feedCardStyle = remember {
         preferences.getString("feedCardStyle", "card")
     }
-    val duo3CardAppearance = remember { preferences.getBoolean("duo3_card_appearance", false) }
-    val duo3CardLayout = remember { preferences.getBoolean("duo3_card_layout", false) }
-    val duo3CardLargeTitle = remember { preferences.getBoolean(DUO3_CARD_LARGE_TITLE_PREFERENCE_KEY, true) }
     val onClick = onClick ?: {
         this.navDestination?.let {
             navigator.onNavigate(it)
@@ -177,8 +172,6 @@ fun FeedCard(
                     onBlockUser = onBlockUser,
                     onBlockByKeywords = onBlockByKeywords,
                     onBlockTopic = onBlockTopic,
-                    duo3CardLayout = duo3CardLayout,
-                    duo3CardLargeTitle = duo3CardLargeTitle,
                 )
             }
             HorizontalDivider(thickness = 0.3.dp)
@@ -191,19 +184,17 @@ fun FeedCard(
                 .padding(horizontal = horizontalPadding, vertical = 8.dp),
         ) {
             Card(
-                colors = if (duo3CardAppearance) {
-                    CardDefaults.cardColors().copy(
-                        containerColor = MaterialTheme.colorScheme.surfaceBright,
-                    )
-                } else {
-                    CardDefaults.cardColors()
-                },
-                shape = if (duo3CardAppearance) RoundedCornerShape(24.dp) else CardDefaults.shape,
+                colors =
+                CardDefaults.cardColors().copy(
+                    containerColor = MaterialTheme.colorScheme.surfaceBright,
+                )
+                ,
+                shape = RoundedCornerShape(24.dp),
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .alpha(1 - min(actionAlpha, 0.5f))
-                    .offset(x = with(density) { animatedOffsetX.toDp() })
-                    .let { if (duo3CardAppearance) it.clip(RoundedCornerShape(24.dp)) else it }
+                .fillMaxWidth()
+                .alpha(1 - min(actionAlpha, 0.5f))
+                .offset(x = with(density) { animatedOffsetX.toDp() })
+                .clip(RoundedCornerShape(24.dp))
                     .clickable {
                         if (!isDragging && abs(animatedOffsetX) < 10f) {
                             onClick(item)
@@ -243,18 +234,11 @@ fun FeedCard(
                             it
                         }
                     },
-                elevation = if (duo3CardAppearance) {
-                    CardDefaults.cardElevation()
-                } else {
-                    CardDefaults.cardElevation(defaultElevation = if (isDragging) 8.dp else 2.dp)
-                },
+                elevation = CardDefaults.cardElevation(),
             ) {
                 Column(
-                    modifier = if (duo3CardAppearance) {
-                        Modifier.padding(16.dp, 12.dp, 16.dp, 16.dp)
-                    } else {
-                        Modifier.padding(8.dp)
-                    },
+                    modifier =
+                        Modifier.padding(16.dp, 12.dp, 16.dp, 16.dp),
                 ) {
                     FeedCardContent(
                         item = item,
@@ -264,9 +248,7 @@ fun FeedCard(
                         onShowMenuChange = { showMenu = it },
                         onBlockUser = onBlockUser,
                         onBlockByKeywords = onBlockByKeywords,
-                        onBlockTopic = onBlockTopic,
-                        duo3CardLayout = duo3CardLayout,
-                        duo3CardLargeTitle = duo3CardLargeTitle,
+                        onBlockTopic = onBlockTopic
                     )
                 }
             }
@@ -428,171 +410,87 @@ private fun FeedCardContent(
     onBlockUser: ((BaseFeedViewModel.FeedDisplayItem) -> Unit)?,
     onBlockByKeywords: ((BaseFeedViewModel.FeedDisplayItem) -> Unit)?,
     onBlockTopic: ((topicId: String, topicName: String) -> Unit)?,
-    duo3CardLayout: Boolean,
-    duo3CardLargeTitle: Boolean,
 ) {
     val navigator = LocalNavigator.current
-    if (duo3CardLayout) {
-        // ── 新排版（duo3）────────────────────────────────────────────────────
-        if (!item.title.isEmpty()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = parseHtmlTextWithTheme(item.title),
-                    style = if (duo3CardLargeTitle) {
-                        MaterialTheme.typography.titleLarge
-                    } else {
-                        MaterialTheme.typography.titleMedium
-                    },
-                    maxLines = 2,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(bottom = 8.dp),
-                )
-            }
+    if (!item.title.isEmpty()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = parseHtmlTextWithTheme(item.title),
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 2,
+                color = MaterialTheme.colorScheme.onSurface,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
         }
+    }
 
-        Column {
-            Row {
-                Text(
-                    text = parseHtmlTextWithTheme(item.summary ?: ""),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                if (!thumbnailUrl.isNullOrEmpty() && showFeedThumbnail && !item.isFiltered) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    AsyncImage(
-                        model = thumbnailUrl,
-                        contentDescription = "Thumbnail",
-                        modifier = Modifier
-                            .padding(top = 8.dp)
-                            .sizeIn(maxHeight = 80.dp, maxWidth = 128.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.FillHeight,
-                    )
-                }
-            }
-            if (item.details.isNotEmpty() || (item.avatarSrc != null && item.authorName != null)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (item.avatarSrc != null && item.authorName != null) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable {},
-                        ) {
-                            item.avatarSrc.let {
-                                AsyncImage(
-                                    model = it,
-                                    contentDescription = "Avatar",
-                                    modifier = Modifier
-                                        .clip(CircleShape)
-                                        .size(24.dp),
-                                )
-                                Spacer(Modifier.width(8.dp))
-                            }
-                            Text(
-                                text = item.authorName,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                        Spacer(Modifier.width(6.dp))
-                    }
-                    if (item.details.isNotEmpty()) {
-                        Text(
-                            text = item.details,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f),
-                        )
-                        FeedCardMenuBox(item, showMenu, onShowMenuChange, onBlockUser, onBlockByKeywords, onBlockTopic, navigator)
-                    }
-                }
-            }
-        }
-    } else {
-        // ── 原始排版（master）────────────────────────────────────────────────
-        if (!item.title.isEmpty() && !item.isFiltered) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = parseHtmlTextWithTheme(item.title),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-        if (item.avatarSrc != null && item.authorName != null) {
-            Spacer(Modifier.height(4.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable {},
-            ) {
-                item.avatarSrc.let {
-                    AsyncImage(
-                        model = it,
-                        contentDescription = "Avatar",
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .size(20.dp),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                }
-                Text(
-                    text = item.authorName,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
+    Column {
         Row {
-            Column(modifier = Modifier.weight(2f)) {
-                Text(
-                    text = parseHtmlTextWithTheme(item.summary ?: ""),
-                    fontSize = 14.sp,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = if (item.isFiltered) 0.dp else 3.dp),
-                )
-                if (item.details.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = item.details,
-                            fontSize = 12.sp,
-                            lineHeight = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f),
-                        )
-                        FeedCardMenuBox(item, showMenu, onShowMenuChange, onBlockUser, onBlockByKeywords, onBlockTopic, navigator)
-                    }
-                }
-            }
-            if (!thumbnailUrl.isNullOrEmpty() && showFeedThumbnail) {
+            Text(
+                text = parseHtmlTextWithTheme(item.summary ?: ""),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (!thumbnailUrl.isNullOrEmpty() && showFeedThumbnail && !item.isFiltered) {
                 Spacer(modifier = Modifier.width(8.dp))
                 AsyncImage(
                     model = thumbnailUrl,
                     contentDescription = "Thumbnail",
                     modifier = Modifier
-                        .weight(1f)
-                        .sizeIn(maxWidth = 60.dp)
+                        .padding(top = 8.dp)
+                        .sizeIn(maxHeight = 80.dp, maxWidth = 128.dp)
                         .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.FillHeight,
                 )
+            }
+        }
+        if (item.details.isNotEmpty() || (item.avatarSrc != null && item.authorName != null)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (item.avatarSrc != null && item.authorName != null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable {},
+                    ) {
+                        item.avatarSrc.let {
+                            AsyncImage(
+                                model = it,
+                                contentDescription = "Avatar",
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .size(24.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text(
+                            text = item.authorName,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Spacer(Modifier.width(6.dp))
+                }
+                if (item.details.isNotEmpty()) {
+                    Text(
+                        text = item.details,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    FeedCardMenuBox(item, showMenu, onShowMenuChange, onBlockUser, onBlockByKeywords, onBlockTopic, navigator)
+                }
             }
         }
     }

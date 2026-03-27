@@ -19,12 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Newspaper
-import androidx.compose.material.icons.filled.PersonAddAlt1
-import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -42,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -52,10 +47,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
@@ -85,7 +78,6 @@ import com.github.zly2006.zhihu.Person
 import com.github.zly2006.zhihu.Pin
 import com.github.zly2006.zhihu.Question
 import com.github.zly2006.zhihu.Search
-import com.github.zly2006.zhihu.SentenceSimilarityTest
 import com.github.zly2006.zhihu.TopLevelDestination
 import com.github.zly2006.zhihu.theme.ThemeManager
 import com.github.zly2006.zhihu.theme.ZhihuTheme
@@ -105,8 +97,6 @@ import com.github.zly2006.zhihu.viewmodel.ArticleViewModel
 import kotlin.reflect.KClass
 import com.github.zly2006.zhihu.ui.NavHost as MyNavHost
 
-const val SURVEY_URL = "https://v.wjx.cn/vm/Ppfw2R4.aspx#"
-
 @SuppressLint("RestrictedApi")
 @Composable
 fun ZhihuMain(modifier: Modifier = Modifier, navController: NavHostController) {
@@ -115,20 +105,16 @@ fun ZhihuMain(modifier: Modifier = Modifier, navController: NavHostController) {
     val context = LocalContext.current
     val preferences = remember { context.getSharedPreferences(PREFERENCE_NAME, android.content.Context.MODE_PRIVATE) }
 
-    // 底部导航栏功能
-    var duo3HomeAccount by remember { mutableStateOf(preferences.getBoolean("duo3_home_account", false)) }
-    var duo3NavStyle by remember { mutableStateOf(preferences.getBoolean("duo3_nav_style", false)) }
     var tapToScrollToTopEnabled by remember { mutableStateOf(preferences.getBoolean("bottomBarTapScrollToTop", true)) }
     var autoHideBottomBar by remember { mutableStateOf(preferences.getBoolean("autoHideBottomBar", false)) }
     val allBottomBarItemKeys = remember {
         listOf(Home.name, Follow.name, HotList.name, Daily.name, OnlineHistory.name, Account.name)
     }
 
-    fun computeSelectedKeys(isDuo3HomeAccount: Boolean) = normalizeBottomBarSelection(
+    fun computeSelectedKeys() = normalizeBottomBarSelection(
         preferences
-            .getStringSet(BOTTOM_BAR_ITEMS_PREFERENCE_KEY, defaultBottomBarSelectionKeys(isDuo3HomeAccount))
-            ?.toSet() ?: defaultBottomBarSelectionKeys(isDuo3HomeAccount),
-        isDuo3HomeAccount,
+            .getStringSet(BOTTOM_BAR_ITEMS_PREFERENCE_KEY, defaultBottomBarSelectionKeys())
+            ?.toSet() ?: defaultBottomBarSelectionKeys(),
         enforceMinimumSelection = true,
     )
 
@@ -139,14 +125,11 @@ fun ZhihuMain(modifier: Modifier = Modifier, navController: NavHostController) {
         ),
     )
 
-    var selectedBottomBarItemKeys by remember { mutableStateOf(computeSelectedKeys(duo3HomeAccount)) }
+    var selectedBottomBarItemKeys by remember { mutableStateOf(computeSelectedKeys()) }
     var startDestination by remember { mutableStateOf(computeStartDestination(selectedBottomBarItemKeys)) }
 
     val reloadBottomBarPreferences = {
-        val updatedDuo3HomeAccount = preferences.getBoolean("duo3_home_account", false)
-        val updatedSelectedBottomBarItemKeys = computeSelectedKeys(updatedDuo3HomeAccount)
-        duo3HomeAccount = updatedDuo3HomeAccount
-        duo3NavStyle = preferences.getBoolean("duo3_nav_style", false)
+        val updatedSelectedBottomBarItemKeys = computeSelectedKeys()
         tapToScrollToTopEnabled = preferences.getBoolean("bottomBarTapScrollToTop", true)
         autoHideBottomBar = preferences.getBoolean("autoHideBottomBar", false)
         selectedBottomBarItemKeys = updatedSelectedBottomBarItemKeys
@@ -170,15 +153,12 @@ fun ZhihuMain(modifier: Modifier = Modifier, navController: NavHostController) {
         }
     }
 
-    val allBottomBarItems = listOf(
+    val bottomBarItems = listOf(
         Triple(Home, "主页", Icons.Filled.Home),
-        Triple(Follow, "关注", if (duo3NavStyle) Icons.Filled.Group else Icons.Filled.PersonAddAlt1),
-        Triple(HotList, "热榜", Icons.Filled.Whatshot),
+        Triple(Follow, "关注", Icons.Filled.Group),
         Triple(Daily, "日报", Icons.Filled.Newspaper),
-        Triple(OnlineHistory, "历史", Icons.Filled.History),
-        Triple(Account, "账号", Icons.Filled.ManageAccounts),
+        Triple(OnlineHistory, "历史", Icons.Filled.History)
     )
-    val bottomBarItems = allBottomBarItems.filter { it.first.name in selectedBottomBarItemKeys }
 
     // 获取页面索引的函数
     fun getPageIndex(route: androidx.navigation.NavDestination): Int = when {
@@ -251,7 +231,7 @@ fun ZhihuMain(modifier: Modifier = Modifier, navController: NavHostController) {
                     NavigationBar(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         modifier = Modifier.height(
-                            (if (duo3NavStyle) 64.dp else 56.dp) + bottomPadding,
+                            (64.dp) + bottomPadding,
                         ),
                     ) {
                         @Composable
@@ -275,40 +255,24 @@ fun ZhihuMain(modifier: Modifier = Modifier, navController: NavHostController) {
                                     }
                                 },
                                 label = {
-                                    if (duo3NavStyle) {
-                                        Text(label)
-                                    } else {
-                                        Text(
-                                            label,
-                                            style = TextStyle(
-                                                fontSize = 9.sp,
-                                                color = LocalContentColor.current.copy(alpha = 0.6f),
-                                            ),
-                                        )
-                                    }
+                                    Text(label)
                                 },
-                                alwaysShowLabel = duo3NavStyle,
-                                colors = if (duo3NavStyle) {
-                                    if (!ThemeManager.isDarkTheme()) {
-                                        NavigationBarItemDefaults.colors().copy(
-                                            selectedIndicatorColor =
-                                                MaterialTheme.colorScheme.secondaryContainer
-                                                    .copy(alpha = 0.92f)
-                                                    .compositeOver(MaterialTheme.colorScheme.secondary),
-                                        )
-                                    } else {
-                                        NavigationBarItemDefaults.colors()
-                                    }
-                                } else {
-                                    NavigationBarItemDefaults.colors(
-                                        selectedIconColor = Color(0xff66ccff),
-                                        indicatorColor = Color.Transparent,
+                                alwaysShowLabel = true,
+                                colors =
+                                if (!ThemeManager.isDarkTheme()) {
+                                    NavigationBarItemDefaults.colors().copy(
+                                        selectedIndicatorColor =
+                                            MaterialTheme.colorScheme.secondaryContainer
+                                                .copy(alpha = 0.92f)
+                                                .compositeOver(MaterialTheme.colorScheme.secondary),
                                     )
+                                } else {
+                                    NavigationBarItemDefaults.colors()
                                 },
                                 icon = {
                                     Icon(icon, contentDescription = label)
                                 },
-                                modifier = (if (duo3NavStyle) Modifier.padding(top = 4.dp) else Modifier).testTag(tag),
+                                modifier = Modifier.padding(top = 4.dp).testTag(tag),
                             )
                         }
 
@@ -404,7 +368,7 @@ fun ZhihuMain(modifier: Modifier = Modifier, navController: NavHostController) {
                     val viewModel: ArticleViewModel = viewModel(navEntry) {
                         ArticleViewModel(article, activity.httpClient, navEntry)
                     }
-                    ArticleScreen(article, viewModel, innerPadding)
+                    ArticleScreen(article, viewModel)
                 }
                 composable<HotList> {
                     HotListScreen(innerPadding)

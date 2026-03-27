@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -52,7 +51,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -107,15 +105,13 @@ fun AccountSettingScreen(
         )
     }
 
-    val useDuo3HomeAccount = remember { preferences.getBoolean("duo3_home_account", false) }
     val selectedBottomBarItemKeys = remember {
         normalizeBottomBarSelection(
             preferences
                 .getStringSet(
                     BOTTOM_BAR_ITEMS_PREFERENCE_KEY,
-                    defaultBottomBarSelectionKeys(useDuo3HomeAccount),
-                )?.toSet() ?: defaultBottomBarSelectionKeys(useDuo3HomeAccount),
-            useDuo3HomeAccount,
+                    defaultBottomBarSelectionKeys(),
+                )?.toSet() ?: defaultBottomBarSelectionKeys(),
             enforceMinimumSelection = true,
         )
     }
@@ -247,38 +243,70 @@ fun AccountSettingScreen(
                 }
             }
 
-            if (useDuo3HomeAccount) {
-                Row(
-                    Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 16.dp, bottom = 32.dp)
-                        .clip(RoundedCornerShape(24.dp)),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    if (data.login) {
-                        Column(
-                            Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer)
-                                .clickable {
-                                    navigator.onNavigate(Collections(AccountData.data.self!!.urlToken!!))
-                                }.padding(8.dp, 16.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally,
+            Row(
+                Modifier
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 16.dp, bottom = 32.dp)
+                    .clip(RoundedCornerShape(24.dp)),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                if (data.login) {
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .clickable {
+                                navigator.onNavigate(Collections(AccountData.data.self!!.urlToken!!))
+                            }.padding(8.dp, 16.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Icon(
+                            Icons.Default.Bookmark,
+                            null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "收藏夹",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .clickable {
+                                onDismissRequest()
+                                navigator.onNavigate(Notification)
+                            }.padding(8.dp, 16.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        BadgedBox(
+                            badge = {
+                                if (unreadCount > 0) {
+                                    Badge { Text(unreadCount.toString()) }
+                                }
+                            },
                         ) {
                             Icon(
-                                Icons.Default.Bookmark,
+                                Icons.Default.Notifications,
                                 null,
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                "收藏夹",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
                         }
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "通知",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                    if (shouldShowAccountHistoryShortcut(selectedBottomBarItemKeys)) {
                         Column(
                             Modifier
                                 .weight(1f)
@@ -286,68 +314,23 @@ fun AccountSettingScreen(
                                 .background(MaterialTheme.colorScheme.primaryContainer)
                                 .clickable {
                                     onDismissRequest()
-                                    navigator.onNavigate(Notification)
+                                    navigator.onNavigate(OnlineHistory)
                                 }.padding(8.dp, 16.dp),
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            BadgedBox(
-                                badge = {
-                                    if (unreadCount > 0) {
-                                        Badge { Text(unreadCount.toString()) }
-                                    }
-                                },
-                            ) {
-                                Icon(
-                                    Icons.Default.Notifications,
-                                    null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
-                            }
+                            Icon(
+                                Icons.Default.History,
+                                null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "通知",
+                                "浏览历史",
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                         }
-                        if (shouldShowAccountHistoryShortcut(useDuo3HomeAccount, selectedBottomBarItemKeys)) {
-                            Column(
-                                Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(MaterialTheme.colorScheme.primaryContainer)
-                                    .clickable {
-                                        onDismissRequest()
-                                        navigator.onNavigate(OnlineHistory)
-                                    }.padding(8.dp, 16.dp),
-                                verticalArrangement = Arrangement.Center,
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                Icon(
-                                    Icons.Default.History,
-                                    null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    "浏览历史",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
-                            }
-                        }
-                    }
-                }
-            } else {
-                Spacer(Modifier.height(32.dp))
-                SettingItemGroup {
-                    if (data.login) {
-                        SettingItem(
-                            title = { Text("查看收藏夹") },
-                            icon = { Icon(Icons.Default.BookmarkBorder, null) },
-                            onClick = { navigator.onNavigate(Collections(AccountData.data.self!!.urlToken!!)) },
-                        )
                     }
                 }
             }
