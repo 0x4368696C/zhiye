@@ -68,8 +68,6 @@ import com.github.zly2006.zhihu.ui.PREFERENCE_NAME
 import com.github.zly2006.zhihu.ui.components.SettingItem
 import com.github.zly2006.zhihu.ui.components.SettingItemGroup
 import com.github.zly2006.zhihu.ui.components.SettingItemWithSwitch
-import com.github.zly2006.zhihu.updater.UpdateManager
-import com.github.zly2006.zhihu.updater.UpdateManager.UpdateState
 import com.github.zly2006.zhihu.util.ContinuousUsageReminderManager
 import com.github.zly2006.zhihu.util.ContinuousUsageReminderPolicy
 import com.github.zly2006.zhihu.util.luoTianYiUrlLauncher
@@ -124,161 +122,7 @@ fun SystemAndUpdateSettingsScreen(
                 .padding(innerPadding)
                 .padding(vertical = 16.dp),
         ) {
-            val updateState by UpdateManager.updateState.collectAsState()
             val coroutineScope = rememberCoroutineScope()
-            val showUpdateBanner = updateState is UpdateState.UpdateAvailable ||
-                updateState is UpdateState.Downloading ||
-                updateState is UpdateState.Downloaded
-
-            var updateVersion: String by remember { mutableStateOf("") }
-            var releaseNotes: String? by remember { mutableStateOf(null) }
-            LaunchedEffect(updateState) {
-                val state = updateState
-                if (state is UpdateState.UpdateAvailable) {
-                    updateVersion = state.version.toString()
-                    releaseNotes = state.releaseNotes
-                }
-            }
-
-            AnimatedVisibility(visible = showUpdateBanner) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceBright,
-                    shape = MaterialTheme.shapes.large,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 16.dp),
-                ) {
-                    Column(modifier = Modifier.padding(16.dp, 12.dp)) {
-                        if (updateVersion.isNotEmpty()) {
-                            Text(
-                                text = "新版本：\n$updateVersion",
-                                style = MaterialTheme.typography.titleLarge,
-                            )
-                        } else {
-                            Text(
-                                text = "检测到新版本",
-                                style = MaterialTheme.typography.titleLarge,
-                            )
-                        }
-
-                        if (releaseNotes != null) {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Surface(
-                                color = MaterialTheme.colorScheme.surfaceContainer,
-                                shape = MaterialTheme.shapes.small,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Column(modifier = Modifier.padding(12.dp, 8.dp)) {
-                                    Text(
-                                        "更新内容",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(bottom = 8.dp),
-                                    )
-                                    SelectionContainer {
-                                        Text(
-                                            buildAnnotatedString {
-                                                val prRegex = Regex("https://github.com/zly2006/zhihu-plus-plus/pull/(\\d+)")
-                                                var lastIndex = 0
-                                                prRegex.findAll(releaseNotes!!).forEach { matchResult ->
-                                                    append(releaseNotes!!.substring(lastIndex, matchResult.range.first))
-                                                    val prNumber = matchResult.groupValues[1]
-                                                    withLink(LinkAnnotation.Url("https://github.com/zly2006/zhihu-plus-plus/pull/$prNumber")) {
-                                                        withStyle(
-                                                            MaterialTheme.typography.bodyMedium
-                                                                .copy(color = MaterialTheme.colorScheme.primary)
-                                                                .toSpanStyle(),
-                                                        ) {
-                                                            append("#$prNumber")
-                                                        }
-                                                    }
-                                                    lastIndex = matchResult.range.last + 1
-                                                }
-                                                append(releaseNotes!!.substring(lastIndex))
-                                            },
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    TextButton(
-                                        onClick = { luoTianYiUrlLauncher(context, "https://github.com/zly2006/zhihu-plus-plus/releases".toUri()) },
-                                        modifier = Modifier.align(Alignment.End),
-                                    ) {
-                                        Text("查看完整更新日志")
-                                        Icon(
-                                            Icons.Default.ArrowOutward,
-                                            null,
-                                            Modifier.size(20.dp),
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        val cnDownloadUrl = (updateState as? UpdateState.UpdateAvailable)?.cnDownloadUrl
-                        if (!cnDownloadUrl.isNullOrBlank()) {
-                            Button(
-                                onClick = {
-                                    runCatching {
-                                        context.startActivity(Intent(Intent.ACTION_VIEW, cnDownloadUrl.toUri()))
-                                    }.onFailure {
-                                        UpdateManager.updateState.value = UpdateState.Error(it.message ?: "无法打开浏览器")
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text("使用国内网盘加速下载", Modifier.padding(0.dp, 4.dp))
-                            }
-                            Text(
-                                "使用国内网盘下载，不需要梯，还可以帮助作者获得流量。您也可以选择使用GitHub下载。",
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        ) {
-                            androidx.compose.material3.OutlinedButton(
-                                onClick = {
-                                    val state = updateState
-                                    if (state is UpdateState.UpdateAvailable) {
-                                        UpdateManager.skipVersion(context, state.version.toString())
-                                        UpdateManager.updateState.value = UpdateState.Latest
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Text("跳过此版本", Modifier.padding(0.dp, 4.dp))
-                            }
-
-                            Button(
-                                onClick = {
-                                    coroutineScope.launch {
-                                        when (val state = updateState) {
-                                            is UpdateState.UpdateAvailable -> UpdateManager.downloadUpdate(context, state.downloadUrl)
-                                            is UpdateState.Downloaded -> UpdateManager.installUpdate(context, state.file)
-                                            else -> {}
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Text(
-                                    when (updateState) {
-                                        is UpdateState.UpdateAvailable -> "下载更新"
-                                        is UpdateState.Downloading -> "下载中..."
-                                        is UpdateState.Downloaded -> "安装更新"
-                                        else -> "下载更新"
-                                    },
-                                    Modifier.padding(0.dp, 4.dp),
-                                )
-                            }
-                        }
-                    }
-                }
-            }
 
             // Github Token
             var githubToken by remember { mutableStateOf(preferences.getString("githubToken", "") ?: "") }
@@ -335,39 +179,6 @@ fun SystemAndUpdateSettingsScreen(
                         preferences.edit { putBoolean("allowTelemetry", it) }
                     },
                 )
-            }
-
-            AnimatedVisibility(visible = !showUpdateBanner) {
-                Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            when (updateState) {
-                                is UpdateState.NoUpdate, is UpdateState.Error -> {
-                                    UpdateManager.checkForUpdate(context)
-                                    if (UpdateManager.updateState.value is UpdateState.UpdateAvailable) {
-                                        scrollState.animateScrollTo(0)
-                                    }
-                                }
-                                UpdateState.Latest -> {
-                                    UpdateManager.updateState.value = UpdateState.NoUpdate
-                                }
-                                else -> { /* NOOP */ }
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().padding(16.dp, 0.dp, 16.dp, 16.dp),
-                ) {
-                    Text(
-                        when (updateState) {
-                            is UpdateState.NoUpdate -> "检查更新"
-                            is UpdateState.Checking -> "检查中..."
-                            is UpdateState.Latest -> "已经是最新版本"
-                            is UpdateState.Error -> "检查更新失败，点击重试"
-                            else -> ""
-                        },
-                        Modifier.padding(0.dp, 4.dp),
-                    )
-                }
             }
 
             var reminderExpanded by remember { mutableStateOf(false) }

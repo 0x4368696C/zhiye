@@ -71,7 +71,7 @@ fun BlocklistSettingsScreen(
     val coroutineScope = rememberCoroutineScope()
 
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("屏蔽关键词", "NLP智能屏蔽", "屏蔽用户", "屏蔽主题")
+    val tabs = listOf("屏蔽关键词", "屏蔽用户", "屏蔽主题")
 
     var blockedKeywords by remember { mutableStateOf<List<BlockedKeyword>>(emptyList()) }
     var blockedUsers by remember { mutableStateOf<List<BlockedUser>>(emptyList()) }
@@ -291,11 +291,7 @@ fun BlocklistSettingsScreen(
                         }
                     },
                 )
-                1 -> NLPKeywordManagementScreen(
-                    innerPadding = PaddingValues(0.dp),
-                    onNavigateBack = navigator.onNavigateBack,
-                )
-                2 -> BlockedUsersList(
+                1 -> BlockedUsersList(
                     users = blockedUsers,
                     onDeleteUser = { user ->
                         coroutineScope.launch {
@@ -333,7 +329,7 @@ fun BlocklistSettingsScreen(
                         )
                     },
                 )
-                3 -> BlockedTopicsList(
+                2 -> BlockedTopicsList(
                     topics = blockedTopics,
                     onDeleteTopic = { topic ->
                         coroutineScope.launch {

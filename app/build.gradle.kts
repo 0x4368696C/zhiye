@@ -1,6 +1,5 @@
 @file:OptIn(ExperimentalEncodingApi::class)
 
-import buildlogic.gitHash
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -37,27 +36,13 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.github.zly2006.zhplus"
+        applicationId = "kotonoha.zhiye"
         minSdk = 27
-        targetSdk = 35
+        targetSdk = 36
         versionCode = property("app.versionCode").toString().toIntOrNull() ?: 1
         versionName = property("app.versionName").toString()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    flavorDimensions += "version"
-    productFlavors {
-        create("full") {
-            dimension = "version"
-            buildConfigField("boolean", "IS_LITE", "false")
-        }
-        create("lite") {
-            dimension = "version"
-            buildConfigField("boolean", "IS_LITE", "true")
-            applicationIdSuffix = ".lite"
-//            versionNameSuffix = "-lite"
-        }
     }
 
     androidResources {
@@ -86,15 +71,10 @@ android {
     }
 
     buildTypes {
-        val gitHash = gitHash(rootProject.projectDir)
-        debug {
-            buildConfigField("String", "GIT_HASH", "\"$gitHash\"")
-        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            buildConfigField("String", "GIT_HASH", "\"$gitHash\"")
             if (System.getenv("signingKey") != null) {
                 signingConfig = signingConfigs["env"]
             }
@@ -177,15 +157,15 @@ dependencies {
     // ZXing for QR code scanning
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
-    implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.core:core-ktx:1.18.0")
     implementation("com.google.android.material:material:1.13.0")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.10.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0")
     //noinspection GradleDependency
     implementation("androidx.navigation:navigation-ui-ktx:2.9.2")
-    implementation("androidx.webkit:webkit:1.14.0")
-    implementation("androidx.activity:activity-compose:1.12.1")
-    implementation(platform("androidx.compose:compose-bom:2025.12.00"))
+    implementation("androidx.webkit:webkit:1.15.0")
+    implementation("androidx.activity:activity-compose:1.13.0")
+    implementation(platform("androidx.compose:compose-bom:2026.03.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.material:material-icons-extended")
@@ -202,7 +182,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
     annotationProcessor("androidx.room:room-compiler:2.8.4")
     ksp("androidx.room:room-compiler:2.8.4")
-    "fullImplementation"(project(":sentence_embeddings"))
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-tooling-preview")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
@@ -211,11 +190,6 @@ dependencies {
     implementation("com.github.chrisbanes:PhotoView:2.0.0") {
         exclude(group = "com.android.support")
     }
-
-    // HanLP for Chinese NLP
-    "fullImplementation"("com.hankcs:hanlp:portable-1.8.4")
-//    implementation("com.halilibo.compose-richtext:richtext-ui-material3-android:1.0.0-alpha03")
-//    implementation("com.halilibo.compose-richtext:richtext-markdown-android:1.0.0-alpha03")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("io.ktor:ktor-client-cio:$ktor")

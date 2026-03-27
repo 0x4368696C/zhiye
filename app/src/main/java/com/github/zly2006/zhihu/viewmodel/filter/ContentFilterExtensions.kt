@@ -11,7 +11,6 @@ import com.github.zly2006.zhihu.data.ContentDetailCache
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.Feed
 import com.github.zly2006.zhihu.data.target
-import com.github.zly2006.zhihu.nlp.BlockedKeywordRepository
 import com.github.zly2006.zhihu.ui.PREFERENCE_NAME
 import com.github.zly2006.zhihu.viewmodel.feed.BaseFeedViewModel.FeedDisplayItem
 import kotlinx.coroutines.Dispatchers
@@ -387,50 +386,6 @@ object ContentFilterExtensions {
             }
             removed.forEach { blocked.add(it to "关键词屏蔽") }
             filteredContents = kept
-        }
-
-        // 应用NLP语义屏蔽
-        if (isNLPBlockingEnabled(context)) {
-            val blockedThisRound = mutableListOf<FilterableContent>()
-            val nlpRepository = BlockedKeywordRepository(context)
-            val threshold = getNLPSimilarityThreshold(context)
-            val finalFilteredContents = mutableListOf<FilterableContent>()
-
-            for (content in filteredContents) {
-                val (shouldBlock, matchedKeywords) = nlpRepository.checkNLPBlockingWithWeight(
-                    title = content.title,
-                    excerpt = content.summary,
-                    content = content.content?.let { Jsoup.parse(it).text() },
-                    threshold = threshold,
-                )
-
-                if (!shouldBlock) {
-                    finalFilteredContents.add(content)
-                } else {
-                    nlpRepository.recordBlockedContent(
-                        contentId = content.contentId,
-                        contentType = content.contentType,
-                        title = content.title,
-                        excerpt = content.summary ?: "",
-                        authorName = content.authorName,
-                        authorId = content.authorId,
-                        matchedKeywords = matchedKeywords,
-                    )
-                    val keywordNames = matchedKeywords.joinToString("、") { it.keyword }
-                    blocked.add(content to "NLP语义屏蔽：$keywordNames")
-                    blockedThisRound.add(content)
-                }
-            }
-
-            if (blockedThisRound.isNotEmpty()) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    context.mainExecutor.execute {
-                        Toast.makeText(context, "NLP 已屏蔽 ${blockedThisRound.first().title.take(10)}... 等 ${blockedThisRound.size} 条内容", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-
-            filteredContents = finalFilteredContents
         }
 
         // 应用主题屏蔽

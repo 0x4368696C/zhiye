@@ -374,16 +374,6 @@ private fun FeedCardMenuBox(
             expanded = showMenu,
             onDismissRequest = { onShowMenuChange(false) },
         ) {
-            @Suppress("SimplifyBooleanWithConstants", "KotlinConstantConditions")
-            if (onBlockByKeywords != null && !BuildConfig.IS_LITE) {
-                DropdownMenuItem(
-                    text = { Text("按关键词屏蔽") },
-                    onClick = {
-                        onShowMenuChange(false)
-                        onBlockByKeywords(item)
-                    },
-                )
-            }
             DropdownMenuItem(
                 text = { Text("屏蔽用户") },
                 onClick = {

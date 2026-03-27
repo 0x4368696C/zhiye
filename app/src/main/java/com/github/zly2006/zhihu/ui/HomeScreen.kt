@@ -73,7 +73,6 @@ import com.github.zly2006.zhihu.data.ZhihuMeNotifications
 import com.github.zly2006.zhihu.data.target
 import com.github.zly2006.zhihu.ui.components.AnnouncementCard
 import com.github.zly2006.zhihu.ui.components.AnnouncementCardDefaults
-import com.github.zly2006.zhihu.ui.components.BlockByKeywordsDialog
 import com.github.zly2006.zhihu.ui.components.BlockUserConfirmDialog
 import com.github.zly2006.zhihu.ui.components.DraggableRefreshButton
 import com.github.zly2006.zhihu.ui.components.FeedCard
@@ -81,7 +80,6 @@ import com.github.zly2006.zhihu.ui.components.FeedPullToRefresh
 import com.github.zly2006.zhihu.ui.components.MyModalBottomSheet
 import com.github.zly2006.zhihu.ui.components.PaginatedList
 import com.github.zly2006.zhihu.ui.components.ProgressIndicatorFooter
-import com.github.zly2006.zhihu.updater.UpdateManager
 import com.github.zly2006.zhihu.util.clipboardManager
 import com.github.zly2006.zhihu.util.signFetchRequest
 import com.github.zly2006.zhihu.viewmodel.feed.BaseFeedViewModel
@@ -206,9 +204,6 @@ fun HomeScreen(scrollToTopTrigger: Int = 0, innerPadding: PaddingValues) {
         }
     }
 
-    val updateState by UpdateManager.updateState.collectAsState()
-    var dismissedUpdateVersion by remember { mutableStateOf<String?>(null) }
-
     // 首次启动提示
     var showFilterExplainDialog by remember {
         mutableStateOf(!preferences.getBoolean("filterExplainDialogShown", false))
@@ -267,10 +262,6 @@ fun HomeScreen(scrollToTopTrigger: Int = 0, innerPadding: PaddingValues) {
     // 屏蔽用户确认对话框
     var showBlockUserDialog by remember { mutableStateOf(false) }
     var userToBlock by remember { mutableStateOf<Pair<String, String>?>(null) } // Pair of userId and userName
-
-    // 按关键词屏蔽对话框
-    var showBlockByKeywordsDialog by remember { mutableStateOf(false) }
-    var feedToBlockByKeywords by remember { mutableStateOf<Pair<String, String?>?>(null) } // Pair of title and excerpt
 
     Scaffold(
         modifier = if (duo3HomeAccount) {
@@ -452,24 +443,6 @@ fun HomeScreen(scrollToTopTrigger: Int = 0, innerPadding: PaddingValues) {
                 key = { item -> item.navDestination.toString() },
                 topContent = {
                     item {
-                        val availableUpdate = updateState as? UpdateManager.UpdateState.UpdateAvailable
-
-                        AnnouncementCard(
-                            visible = availableUpdate != null && dismissedUpdateVersion != availableUpdate.version.toString(),
-                            title = "发现新版本：${availableUpdate?.version}${if (availableUpdate?.isNightly == true) " (Nightly)" else ""}",
-                            leadingIcon = { Icon(Icons.Default.ArrowCircleUp, contentDescription = null) },
-                            accept = { Text("查看更新") },
-                            onAccept = {
-                                context.navigate(Account.SystemAndUpdateSettings)
-                            },
-                            dismiss = { Text("以后") },
-                            onDismiss = {
-                                availableUpdate?.version?.toString()?.let { versionStr ->
-                                    dismissedUpdateVersion = versionStr
-                                }
-                            },
-                            colors = AnnouncementCardDefaults.colorsImportant(),
-                        )
                         AnnouncementCard(
                             visible = showFilterExplainDialog,
                             title = "为什么有的内容突然消失了？",
@@ -520,12 +493,6 @@ fun HomeScreen(scrollToTopTrigger: Int = 0, innerPadding: PaddingValues) {
                         viewModel.handleBlockUser(context, feedItem) { authorInfo ->
                             userToBlock = authorInfo
                             showBlockUserDialog = true
-                        }
-                    },
-                    onBlockByKeywords = { feedItem ->
-                        viewModel.handleBlockByKeywords(context, feedItem) { (item, contentInfo) ->
-                            feedToBlockByKeywords = contentInfo.first to contentInfo.second
-                            showBlockByKeywordsDialog = true
                         }
                     },
                     onBlockTopic = { topicId, topicName ->
@@ -586,21 +553,4 @@ fun HomeScreen(scrollToTopTrigger: Int = 0, innerPadding: PaddingValues) {
         },
     )
 
-    // 按关键词屏蔽对话框
-    feedToBlockByKeywords?.let { (title, excerpt) ->
-        BlockByKeywordsDialog(
-            showDialog = showBlockByKeywordsDialog,
-            feedTitle = title,
-            feedExcerpt = excerpt,
-            onDismiss = {
-                showBlockByKeywordsDialog = false
-                feedToBlockByKeywords = null
-            },
-            onConfirm = {
-                viewModel.refresh(context)
-                showBlockByKeywordsDialog = false
-                feedToBlockByKeywords = null
-            },
-        )
-    }
 }

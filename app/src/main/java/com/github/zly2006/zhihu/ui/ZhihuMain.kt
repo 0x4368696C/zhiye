@@ -456,9 +456,6 @@ fun ZhihuMain(modifier: Modifier = Modifier, navController: NavHostController) {
                 composable<Notification.NotificationSettings> {
                     NotificationSettingsScreen(innerPadding)
                 }
-                composable<SentenceSimilarityTest> {
-                    SentenceSimilarityTestScreen(innerPadding)
-                }
                 composable<Account.AppearanceSettings> {
                     val args = it.toRoute<Account.AppearanceSettings>()
                     AppearanceSettingsScreen(

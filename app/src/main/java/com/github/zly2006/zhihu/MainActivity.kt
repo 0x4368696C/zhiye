@@ -33,16 +33,13 @@ import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import com.github.zly2006.zhihu.data.AccountData
 import com.github.zly2006.zhihu.data.HistoryStorage
-import com.github.zly2006.zhihu.nlp.SentenceEmbeddingManager
 import com.github.zly2006.zhihu.theme.ThemeManager
 import com.github.zly2006.zhihu.theme.ZhihuTheme
 import com.github.zly2006.zhihu.ui.PREFERENCE_NAME
 import com.github.zly2006.zhihu.ui.ZhihuMain
 import com.github.zly2006.zhihu.ui.components.getHighestQualityVideoUrl
-import com.github.zly2006.zhihu.updater.UpdateManager
 import com.github.zly2006.zhihu.util.ContinuousUsageReminderManager
 import com.github.zly2006.zhihu.util.EmojiManager
-import com.github.zly2006.zhihu.util.PowerSaveModeCompat
 import com.github.zly2006.zhihu.util.ZhihuCredentialRefresher
 import com.github.zly2006.zhihu.util.clearShareImageCache
 import com.github.zly2006.zhihu.util.clipboardManager
@@ -165,13 +162,6 @@ class MainActivity : ComponentActivity() {
                                 "刷新登录状态失败，如多次看到此提示请重新登录",
                                 Toast.LENGTH_LONG,
                             ).show()
-                    }
-                }
-                if (!PowerSaveModeCompat.getPowerSaveMode(this@MainActivity).isPowerSaveMode) {
-                    try {
-                        SentenceEmbeddingManager.ensureModel(this@MainActivity)
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to initialize NLP embedding model", e)
                     }
                 }
             }
@@ -306,18 +296,6 @@ class MainActivity : ComponentActivity() {
             } else {
                 Log.e(TAG, "TTS Initialization failed")
                 ttsState = TtsState.Error
-            }
-        }
-
-        // 自动检查更新（在应用启动时）
-        if (savedInstanceState == null) {
-            @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch {
-                try {
-                    UpdateManager.autoCheckForUpdate(this@MainActivity)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to check for updates", e)
-                }
             }
         }
     }

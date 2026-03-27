@@ -86,8 +86,6 @@ import com.github.zly2006.zhihu.ui.subscreens.BOTTOM_BAR_ITEMS_PREFERENCE_KEY
 import com.github.zly2006.zhihu.ui.subscreens.defaultBottomBarSelectionKeys
 import com.github.zly2006.zhihu.ui.subscreens.normalizeBottomBarSelection
 import com.github.zly2006.zhihu.ui.subscreens.shouldShowAccountHistoryShortcut
-import com.github.zly2006.zhihu.updater.UpdateManager
-import com.github.zly2006.zhihu.updater.UpdateManager.UpdateState
 import com.github.zly2006.zhihu.util.clipboardManager
 import com.github.zly2006.zhihu.util.signFetchRequest
 import io.ktor.http.Url
@@ -385,25 +383,13 @@ fun AccountSettingScreen(
                 }
             }
 
-            val updateState by UpdateManager.updateState.collectAsState()
-            LaunchedEffect(updateState) {
-                if (updateState is UpdateState.UpdateAvailable) {
-                    val state = updateState as UpdateState.UpdateAvailable
-                    val versionType = if (state.isNightly) "Nightly版本" else "正式版本"
-                    Toast.makeText(context, "发现新$versionType ${state.version}", Toast.LENGTH_SHORT).show()
-                }
-                if (updateState is UpdateState.Error) {
-                    Toast.makeText(context, "检查更新失败: ${(updateState as UpdateState.Error).message}", Toast.LENGTH_LONG).show()
-                }
-            }
-
             SettingItemGroup(
                 title = "关于",
                 footer = { Text("本软件仅供学习交流使用，应用内内容由知乎网站提供，著作权归其对应作者所有。") },
             ) {
                 SettingItem(
                     title = { Text("知乎++") },
-                    description = { Text("版本号：${BuildConfig.VERSION_NAME} ${BuildConfig.BUILD_TYPE}, ${BuildConfig.GIT_HASH}") },
+                    description = { Text("版本号：${BuildConfig.VERSION_NAME} ${BuildConfig.BUILD_TYPE}") },
                     icon = {
                         Image(
                             painterResource(R.drawable.ic_launcher_foreground),
@@ -424,7 +410,7 @@ fun AccountSettingScreen(
                             }
                         },
                         onLongClick = {
-                            val versionInfo = "${BuildConfig.VERSION_NAME} ${BuildConfig.BUILD_TYPE}, ${BuildConfig.GIT_HASH}"
+                            val versionInfo = "${BuildConfig.VERSION_NAME} ${BuildConfig.BUILD_TYPE}"
                             val clip = android.content.ClipData.newPlainText("version", versionInfo)
                             context.clipboardManager.setPrimaryClip(clip)
                             Toast.makeText(context, "已复制版本号", Toast.LENGTH_SHORT).show()
